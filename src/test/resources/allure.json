@@ -1,0 +1,18 @@
+{
+  "allure": {
+    "directory": "target/allure-results",
+    "links": {
+      "issue": "https://jira.company.com/browse/{}",
+      "tms": "https://testrail.company.com/index.php?/cases/view/{}"
+    }
+  },
+  "reporting": {
+    "exclude-logs": ["org.apache.http", "io.restassured.internal"],
+    "screenshots-on-fail": true,
+    "system-info": {
+      "Application": "Insurance API Testing",
+      "Environment": "${environment}",
+      "API Version": "${api.version}"
+    }
+  }
+}

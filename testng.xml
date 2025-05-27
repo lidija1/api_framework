@@ -1,0 +1,8 @@
+<!DOCTYPE suite SYSTEM "http://testng.org/testng-1.0.dtd">
+<suite name="Insurance API Test Suite" parallel="classes" thread-count="3">
+    <test name="Customer API Tests">
+        <classes>
+            <class name="tests.CustomerAPITests"/>
+        </classes>
+    </test>
+</suite>
