@@ -230,7 +230,7 @@ public class JsonUtils {
 
     public static Map<String, Object> toMap(String json) {
         try {
-            return MAPPER.readValue(json, Map.class);
+            return MAPPER.readValue(json, new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {});
         } catch (Exception e) {
             throw new RuntimeException("Failed to convert JSON to Map", e);
         }

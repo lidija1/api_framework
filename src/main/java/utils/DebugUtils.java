@@ -3,7 +3,6 @@ package utils;
 import exceptions.APITestException;
 import io.qameta.allure.Attachment;
 import io.restassured.response.Response;
-import config.ConfigManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.util.Map;
@@ -26,8 +25,7 @@ public class DebugUtils {
         StringBuilder details = new StringBuilder();
         details.append("=== Test Failure Details ===\n");
         details.append("Test: ").append(testName).append("\n\n");
-
-        // Request Details        details.append("--- Request Details ---\n");
+        details.append("--- Request Details ---\n");
         details.append("Method: ").append(ApiTestUtils.getHeaderValue(response, "Request-Method")).append("\n");
         details.append("URL: ").append(ApiTestUtils.getHeaderValue(response, "Request-URL")).append("\n");
         if (requestBody != null) {
@@ -38,8 +36,6 @@ public class DebugUtils {
                 header -> header.getName(),
                 header -> header.getValue(),
                 (v1, v2) -> v1 + "," + v2)))).append("\n\n");
-
-        // Response Details
         details.append("--- Response Details ---\n");
         details.append("Status Code: ").append(response.getStatusCode()).append("\n");
         details.append("Status Line: ").append(response.getStatusLine()).append("\n");
@@ -101,16 +97,5 @@ public class DebugUtils {
         
         logger.error("Error Report Generated: {}", report.toString());
         return report.toString();
-    }
-
-    /**
-     * Log environment details for debugging
-     */
-    public static void logEnvironmentInfo() {
-        logger.info("=== Environment Information ===");
-        logger.info("Java Version: {}", System.getProperty("java.version"));        logger.info("OS: {} {}", System.getProperty("os.name"), System.getProperty("os.version"));
-        String env = ConfigManager.getInstance().getEnvironment();
-        logger.info("Environment: {}", env);
-        logger.info("Base URL: {}", ConfigManager.getInstance().getBaseUrl());
     }
 }

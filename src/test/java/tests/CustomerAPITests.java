@@ -1,48 +1,52 @@
 package tests;
 
 import base.BaseAPITest;
+import exceptions.ApiResponseException;
 import io.qameta.allure.Description;
 import io.qameta.allure.Feature;
 import io.qameta.allure.Severity;
 import io.qameta.allure.SeverityLevel;
+import io.restassured.builder.RequestSpecBuilder;
 import io.restassured.response.Response;
-import org.testng.Assert;
 import org.testng.annotations.Test;
 import utils.DataProvider;
 import utils.DateUtils;
-import utils.AuthenticationManager;
 import static io.restassured.RestAssured.given;
 import static io.restassured.module.jsv.JsonSchemaValidator.matchesJsonSchemaInClasspath;
 import static org.hamcrest.Matchers.*;
 import static org.hamcrest.MatcherAssert.assertThat;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+
+import io.restassured.specification.RequestSpecification;
+
+import static org.assertj.core.api.Assertions.fail;
+
+// Add import for ResponseValidator if it exists in your project
+// import utils.ResponseValidator;
 
 @Feature("Customer API Tests")
 public class CustomerAPITests extends BaseAPITest {
     private List<String> createdCustomerIds = new ArrayList<>();
+    private static final String CONTENT_TYPE_JSON = "application/json";
     
     @Test
     @Description("Test retrieving all customers")
     @Severity(SeverityLevel.CRITICAL)
     public void testGetAllCustomers() {
         Response response = given()
-                .spec(requestSpec)
-                .when()
-                .get("/users")
-                .then()
-                .statusCode(200)
-                .body("page", equalTo(1))
-                .body("data", hasSize(greaterThan(0)))
-                .body(matchesJsonSchemaInClasspath("schemas/customer-list-schema.json"))
-                .extract().response();
+            .spec(requestSpec)
+            .when()
+            .get("/users/1")
+            .then()
+            .statusCode(200)
+            .body("page", equalTo(1))
+            .body("data", hasSize(greaterThan(0)))
+            .body(matchesJsonSchemaInClasspath("schemas/customer-list-schema.json"))
+            .extract().response();
 
         // Validate response structure
-        assertThat("Response contains data array", response.path("data"), notNullValue());
-        assertThat("Response contains pagination info", response.path("total"), greaterThan(0));
+        assertThat(response.path("data"), notNullValue());
+        assertThat(response.path("total"), greaterThan(0));
 
         List<Map<String, Object>> customers = response.jsonPath().getList("data");
         customers.forEach(customer -> {
@@ -55,6 +59,7 @@ public class CustomerAPITests extends BaseAPITest {
     @Severity(SeverityLevel.BLOCKER)
     public void testCreateNewCustomer() {
         // Get test data and validate it
+        @SuppressWarnings("unchecked")
         Map<String, Object> newCustomer = DataProvider.getTestData("customers.json", "scenarios.new_customer", Map.class);
         assertThat("Customer name is provided", newCustomer.get("name"), notNullValue());
         assertThat("Customer job is provided", newCustomer.get("job"), notNullValue());
@@ -289,5 +294,111 @@ public class CustomerAPITests extends BaseAPITest {
         assertThat("Update timestamp is present", updatedAt, notNullValue());
         assertThat("Timestamp matches ISO-8601 format", 
             updatedAt.matches("\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}.\\d{3}Z"));
+    }
+
+    @Test
+    @Description("Test API error handling - Not Found")
+    @Severity(SeverityLevel.NORMAL)
+    public void testApiErrorHandling404() {
+        try {
+            given()
+                .spec(requestSpec)
+                .when()
+                .get("/users/999")  // Non-existent user
+                .then()
+                .extract().response();
+            
+            fail("Expected ApiResponseException was not thrown");
+        } catch (ApiResponseException e) {
+            org.assertj.core.api.Assertions.assertThat(e.getStatusCode()).isEqualTo(404);
+            org.assertj.core.api.Assertions.assertThat(e.getMessage()).contains("Not Found");
+            org.assertj.core.api.Assertions.assertThat(e.getEndpoint()).contains("/users/999");
+            org.assertj.core.api.Assertions.assertThat(e.getRequestMethod()).isEqualTo("GET");
+        }
+    }
+
+    @Test
+    @Description("Test API error handling - Bad Request")
+    @Severity(SeverityLevel.NORMAL)
+    public void testApiErrorHandling400() {
+        Map<String, String> invalidData = new HashMap<>();
+        invalidData.put("email", "invalid-email");  // Invalid email format
+
+        try {
+            given()
+                .spec(requestSpec)
+                .body(invalidData)
+                .when()
+                .post("/register")
+                .then()
+                .extract().response();
+            
+            fail("Expected ApiResponseException was not thrown");
+        } catch (ApiResponseException e) {
+            org.assertj.core.api.Assertions.assertThat(e.getStatusCode()).isEqualTo(400);
+            org.assertj.core.api.Assertions.assertThat(e.getMessage()).contains("Bad Request");
+            org.assertj.core.api.Assertions.assertThat(e.getResponseBody()).asString().contains("error");
+        }
+    }
+
+    @Test
+    @Description("Test API error handling - Unauthorized")
+    @Severity(SeverityLevel.CRITICAL)
+    public void testApiErrorHandling401() {
+        // Ensure requestSpec is not null
+        org.assertj.core.api.Assertions.assertThat(requestSpec).isNotNull();
+
+        // Create a new specification instead of modifying existing one
+        // Retrieve base URI from configuration or define it directly
+        String baseUri = "https://your-api-base-uri.com"; // TODO: Replace with your actual base URI or fetch from config
+        RequestSpecification noAuthSpec = new RequestSpecBuilder()
+                .setBaseUri(baseUri)
+                .setContentType(CONTENT_TYPE_JSON)
+                .addHeader("Accept", CONTENT_TYPE_JSON)
+                .build();
+
+        try {
+            given()
+                    .spec(noAuthSpec)
+                    .when()
+                    .get("/users/me")
+                    .then()
+                    .extract().response();
+
+            fail("Expected ApiResponseException was not thrown");
+        } catch (ApiResponseException e) {
+            org.assertj.core.api.Assertions.assertThat(e.getStatusCode()).isEqualTo(401);
+            org.assertj.core.api.Assertions.assertThat(e.getMessage())
+                    .contains("Unauthorized")
+                    .contains("Authentication required");
+            Map<String, Object> responseMap = e.getResponseBodyAsMap();
+            org.assertj.core.api.Assertions.assertThat(responseMap).containsKey("error");
+            org.assertj.core.api.Assertions.assertThat(responseMap.get("error")).isNotNull();
+        }
+    }
+    @Test
+    @Description("Test response validation with custom message")
+    @Severity(SeverityLevel.NORMAL)
+    public void testResponseValidationWithCustomMessage() {
+        Response response = given()
+            .spec(requestSpec)
+            .when()
+            .get("/users/1")
+            .then()
+            .extract().response();
+        // If ResponseValidator does not exist, implement a simple inline validation here:
+        if (response.statusCode() != 200) {
+            fail("Failed to retrieve user details: Expected 200 but got " + response.statusCode());
+        }
+
+        // Validate with custom error message
+        if (response.statusCode() != 200) {
+            fail("Failed to retrieve user details: Expected 200 but got " + response.statusCode());
+        }
+        
+        // Additional assertions
+        assertThat(response.path("data.id"), equalTo(1));
+
+        assertThat(response.path("data.email"), notNullValue());
     }
 }

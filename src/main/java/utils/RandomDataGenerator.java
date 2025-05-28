@@ -13,7 +13,7 @@ import io.qameta.allure.Step;
  * phone numbers, and other common data types needed for testing.
  */
 public class RandomDataGenerator {
-    private static Faker faker = new Faker(new Locale("en-US"));
+    private static Faker faker = new Faker(Locale.forLanguageTag("en-US"));
     
     /**
      * Reinitialize faker with a specific locale.
@@ -22,7 +22,7 @@ public class RandomDataGenerator {
      * @param locale The locale to use (e.g., "fr", "es", "de")
      */
     public static void setLocale(String locale) {
-        faker = new Faker(new Locale(locale));
+        faker = new Faker(Locale.forLanguageTag(locale));
     }
 
     /**
