@@ -44,7 +44,7 @@ public class SchemaVersionManager {
         JsonNode schema = versions.get(version);
         if (schema == null) {
             throw new RuntimeException(
-                String.format("Schema version %d not found for: %s", version, schemaName));
+                    String.format("Schema version %d not found for: %s", version, schemaName));
         }
         return schema;
     }
@@ -56,8 +56,8 @@ public class SchemaVersionManager {
         try {
             JsonNode schema = getSchema(schemaName, version);
             ProcessingReport report = JsonSchemaFactory.byDefault()
-                .getJsonSchema(schema)
-                .validate(data);
+                    .getJsonSchema(schema)
+                    .validate(data);
             return report.isSuccess();
         } catch (Exception e) {
             logger.error("Schema validation failed", e);
@@ -76,20 +76,20 @@ public class SchemaVersionManager {
         Map<Integer, JsonNode> versions = new HashMap<>();
         try {
             Files.walk(Paths.get(SCHEMA_BASE_PATH))
-                .filter(Files::isRegularFile)
-                .filter(path -> path.getFileName().toString().startsWith(schemaName))
-                .forEach(path -> {
-                    Matcher matcher = VERSION_PATTERN.matcher(path.getFileName().toString());
-                    if (matcher.find()) {
-                        int version = Integer.parseInt(matcher.group(1));
-                        try {
-                            JsonNode schema = JsonUtils.readJsonFile(path.toString());
-                            versions.put(version, schema);
-                        } catch (Exception e) {
-                            logger.error("Failed to load schema: " + path, e);
+                    .filter(Files::isRegularFile)
+                    .filter(path -> path.getFileName().toString().startsWith(schemaName))
+                    .forEach(path -> {
+                        Matcher matcher = VERSION_PATTERN.matcher(path.getFileName().toString());
+                        if (matcher.find()) {
+                            int version = Integer.parseInt(matcher.group(1));
+                            try {
+                                JsonNode schema = JsonUtils.readJsonFile(path.toString());
+                                versions.put(version, schema);
+                            } catch (Exception e) {
+                                logger.error("Failed to load schema: " + path, e);
+                            }
                         }
-                    }
-                });
+                    });
         } catch (IOException e) {
             logger.error("Failed to scan schema directory", e);
         }
@@ -124,7 +124,8 @@ public class SchemaVersionManager {
 
     /**
      * Save a schema to file
-     */    private static void saveSchema(JsonNode schema, String fileName) throws IOException {
+     */
+    private static void saveSchema(JsonNode schema, String fileName) throws IOException {
         Path filePath = Paths.get(SCHEMA_BASE_PATH, fileName);
         Files.createDirectories(filePath.getParent());
         String schemaJson = JsonUtils.toJson(schema);

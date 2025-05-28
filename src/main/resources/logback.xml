@@ -6,22 +6,33 @@
     <property name="LOG_FILE" value="api-tests"/>
     
     <!-- Console Appender -->
-    <appender name="Console" class="ch.qos.logback.core.ConsoleAppender">
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
-            <pattern>%d{HH:mm:ss.SSS} [%thread] %highlight(%-5level) %cyan(%logger{15}) - %msg %n</pattern>
+            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
         </encoder>
     </appender>
 
-    <!-- File Appender -->
-    <appender name="RollingFile" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>${LOG_PATH}/api-test.log</file>
+    <!-- File Appender for Test Execution -->
+    <appender name="TEST_EXECUTION" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>logs/test-execution.log</file>
         <encoder>
-            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} [%X{class}:%X{method}] - %msg%n</pattern>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-            <fileNamePattern>${LOG_ARCHIVE}/api-test.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <fileNamePattern>logs/archived/test-execution.%d{yyyy-MM-dd}.log</fileNamePattern>
             <maxHistory>30</maxHistory>
-            <totalSizeCap>3GB</totalSizeCap>
+        </rollingPolicy>
+    </appender>
+
+    <!-- File Appender for API Requests/Responses -->
+    <appender name="API_LOGS" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>logs/api-requests.log</file>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>logs/archived/api-requests.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>30</maxHistory>
         </rollingPolicy>
     </appender>
 
@@ -43,33 +54,51 @@
 
     <!-- Async Appender for better performance -->
     <appender name="AsyncFile" class="ch.qos.logback.classic.AsyncAppender">
-        <appender-ref ref="RollingFile"/>
+        <appender-ref ref="TEST_EXECUTION"/>
+        <appender-ref ref="API_LOGS"/>
         <queueSize>512</queueSize>
         <discardingThreshold>0</discardingThreshold>
     </appender>
 
     <!-- Logger Configuration -->
     <logger name="utils" level="DEBUG" additivity="false">
-        <appender-ref ref="Console"/>
+        <appender-ref ref="CONSOLE"/>
         <appender-ref ref="AsyncFile"/>
         <appender-ref ref="ErrorFile"/>
     </logger>
 
     <logger name="tests" level="DEBUG" additivity="false">
-        <appender-ref ref="Console"/>
+        <appender-ref ref="CONSOLE"/>
         <appender-ref ref="AsyncFile"/>
         <appender-ref ref="ErrorFile"/>
     </logger>
 
     <logger name="io.restassured" level="INFO" additivity="false">
-        <appender-ref ref="Console"/>
+        <appender-ref ref="CONSOLE"/>
         <appender-ref ref="AsyncFile"/>
     </logger>
 
-    <!-- Root Logger -->
+    <!-- Logger for API requests/responses -->
+    <logger name="com.api.testing.logging.RequestResponseLogger" level="DEBUG" additivity="false">
+        <appender-ref ref="API_LOGS" />
+        <appender-ref ref="CONSOLE" />
+    </logger>
+
+    <!-- Logger for test execution -->
+    <logger name="com.api.testing.logging.TestExecutionLogger" level="INFO" additivity="false">
+        <appender-ref ref="TEST_EXECUTION" />
+        <appender-ref ref="CONSOLE" />
+    </logger>
+
+    <!-- Root logger -->
     <root level="INFO">
-        <appender-ref ref="Console"/>
+        <appender-ref ref="CONSOLE"/>
         <appender-ref ref="AsyncFile"/>
         <appender-ref ref="ErrorFile"/>
     </root>
+
+    <!-- Set specific logging levels for packages -->
+    <logger name="com.api.testing" level="DEBUG" />
+    <logger name="io.restassured" level="INFO" />
+    <logger name="org.apache.http" level="INFO" />
 </configuration>

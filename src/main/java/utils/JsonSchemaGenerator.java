@@ -53,7 +53,7 @@ public class JsonSchemaGenerator {
      */
     private static ObjectNode generatePropertySchema(JsonNode value) {
         ObjectNode property = mapper.createObjectNode();
-        
+
         if (value.isObject()) {
             property.put("type", "object");
             property.set("properties", generateProperties(value));
@@ -76,7 +76,7 @@ public class JsonSchemaGenerator {
         } else if (value.isNull()) {
             property.put("type", "null");
         }
-        
+
         return property;
     }
 
@@ -96,25 +96,25 @@ public class JsonSchemaGenerator {
 
     /**
      * Generate schema documentation
-     */    public static String generateSchemaDocumentation(JsonNode schema) {
+     */    
+    public static String generateSchemaDocumentation(JsonNode schema) {
         if (schema == null) {
             throw new IllegalArgumentException("Schema cannot be null");
         }
 
         StringBuilder doc = new StringBuilder();
-        try {
-            doc.append("# JSON Schema Documentation\n\n");
+        doc.append("# JSON Schema Documentation\n\n");
             
-            if (schema.has("title")) {
-                doc.append("## ").append(schema.get("title").asText()).append("\n\n");
-            }
+        if (schema.has("title")) {
+            doc.append("## ").append(schema.get("title").asText()).append("\n\n");
+        }
             
-            if (schema.has("description")) {
-                doc.append(schema.get("description").asText()).append("\n\n");
-            }
+        if (schema.has("description")) {
+            doc.append(schema.get("description").asText()).append("\n\n");
+        }
             
-            doc.append("## Properties\n\n");
-            JsonNode properties = schema.get("properties");
+        doc.append("## Properties\n\n");
+        JsonNode properties = schema.get("properties");
         if (properties != null) {
             properties.fields().forEachRemaining(field -> {
                 doc.append("### ").append(field.getKey()).append("\n\n");
@@ -124,13 +124,15 @@ public class JsonSchemaGenerator {
         }
         
         return doc.toString();
-    }    private static void documentProperty(JsonNode property, StringBuilder doc, int depth) {
+    }
+
+    private static void documentProperty(JsonNode property, StringBuilder doc, int depth) {
         if (property == null || !property.isObject()) {
             LoggerUtils.warn("Invalid property node encountered during documentation generation");
             return;
         }
 
-        String indent = "  ".repeat(depth);
+        String indent = String.join("", Collections.nCopies(depth, "  "));
         
         JsonNode typeNode = property.get("type");
         if (typeNode != null) {

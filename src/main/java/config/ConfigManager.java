@@ -1,64 +1,86 @@
 package config;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.util.Properties;
+import java.util.Map;
 
 public class ConfigManager {
+    
     private static ConfigManager instance;
-    private final Properties properties;    private ConfigManager() {
-        properties = new Properties();
-        String env = System.getProperty("environment", "dev");
-        try {
-            // Load default properties first
-            properties.setProperty("base.url", "https://reqres.in/api");
-            properties.setProperty("api.version", "");
-            properties.setProperty("timeout.connection", "30000");
-            properties.setProperty("timeout.read", "60000");
-            
-            // Load environment specific properties, overriding defaults if exists
-            String configFile = "src/test/resources/config/" + env + ".properties";
-            if (new File(configFile).exists()) {
-                properties.load(new FileInputStream(configFile));
-            }
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to load configuration: " + e.getMessage());
-        }
+    private final Map<String, Object> config;
+    
+    private ConfigManager() {
+        ConfigOperations configOps = new ConfigOperations();
+        this.config = configOps.loadConfig("config/config.json");
     }
-
+    
     public static ConfigManager getInstance() {
         if (instance == null) {
             instance = new ConfigManager();
         }
         return instance;
     }
-
-    public String getProperty(String key) {
-        return properties.getProperty(key);
+    
+    @SuppressWarnings("unchecked")
+    public <T> T getValue(String... path) {
+        Object current = config;
+        for (String key : path) {
+            if (current instanceof Map) {
+                current = ((Map<String, Object>) current).get(key);
+                if (current == null) {
+                    throw new RuntimeException("Configuration value not found for path: " + String.join(".", path));
+                }
+            } else {
+                throw new RuntimeException("Invalid configuration path: " + String.join(".", path));
+            }
+        }
+        return (T) current;
+    }
+    
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> getSection(String... path) {
+        return getValue(path);
     }
 
+    @SuppressWarnings("unchecked")
     public String getBaseUrl() {
-        return getProperty("base.url");
+        Map<String, Object> data = (Map<String, Object>) config.get("base");
+        return (String) data.get("url");
     }
-
+    
+    @SuppressWarnings("unchecked")
     public String getApiVersion() {
-        return getProperty("api.version");
+        Map<String, Object> data = (Map<String, Object>) config.get("api");
+        return (String) data.get("version");
     }
 
+    @SuppressWarnings("unchecked")
+    public String getApiKey() {
+        Map<String, Object> data = (Map<String, Object>) config.get("api");
+        return (String) data.get("key");
+    }
+    
+    @SuppressWarnings("unchecked")
     public int getConnectionTimeout() {
-        return Integer.parseInt(getProperty("timeout.connection"));
+        Map<String, Object> data = (Map<String, Object>) config.get("connection");
+        return (Integer) data.get("timeout");
     }
-
+    
+    @SuppressWarnings("unchecked")
     public int getReadTimeout() {
-        return Integer.parseInt(getProperty("timeout.read"));
+        Map<String, Object> data = (Map<String, Object>) config.get("connection");
+        return (Integer) data.get("read_timeout");
     }
-
-    public String getAuthToken() {
-        return getProperty("auth.token");
+    
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> getConfigSection(String section) {
+        return (Map<String, Object>) config.get(section);
+    }
+    
+    public Object getConfigValue(String section, String key) {
+        Map<String, Object> sectionConfig = getConfigSection(section);
+        return sectionConfig != null ? sectionConfig.get(key) : null;
     }
 
     public String getEnvironment() {
-        return System.getProperty("environment", "dev");
+        return (String) config.get("environment");
     }
 }

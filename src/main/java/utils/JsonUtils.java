@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
+import config.ConfigManager;
 
 import java.io.File;
 import java.io.IOException;
@@ -12,17 +13,22 @@ import java.util.Map;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.function.Predicate;
+import java.util.Iterator;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class JsonUtils {
-    private static ObjectMapper mapper = new ObjectMapper();
+    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final Pattern CONFIG_PATTERN = Pattern.compile("\\$\\{config\\.(.*?)\\}");
+    private static final ConfigManager config = ConfigManager.getInstance();
 
     /**
      * Convert object to JSON string
      */
     public static String toJson(Object obj) {
         try {
-            return mapper.writeValueAsString(obj);
-        } catch (JsonProcessingException e) {
+            return MAPPER.writeValueAsString(obj);
+        } catch (Exception e) {
             throw new RuntimeException("Failed to convert object to JSON", e);
         }
     }
@@ -32,9 +38,9 @@ public class JsonUtils {
      */
     public static <T> T fromJson(String json, Class<T> clazz) {
         try {
-            return mapper.readValue(json, clazz);
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException("Failed to parse JSON", e);
+            return MAPPER.readValue(json, clazz);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to convert JSON to object", e);
         }
     }
 
@@ -43,7 +49,7 @@ public class JsonUtils {
      */
     public static JsonNode readJsonFile(String filePath) {
         try {
-            return mapper.readTree(new File(filePath));
+            return MAPPER.readTree(new File(filePath));
         } catch (IOException e) {
             throw new RuntimeException("Failed to read JSON file: " + filePath, e);
         }
@@ -72,7 +78,7 @@ public class JsonUtils {
      * Convert Map to JSON node
      */
     public static JsonNode mapToJson(Map<String, Object> map) {
-        return mapper.valueToTree(map);
+        return MAPPER.valueToTree(map);
     }
 
     /**
@@ -81,7 +87,7 @@ public class JsonUtils {
     @SuppressWarnings("unchecked")
     public static Map<String, Object> jsonToMap(JsonNode node) {
         try {
-            return mapper.treeToValue(node, Map.class);
+            return MAPPER.treeToValue(node, Map.class);
         } catch (JsonProcessingException e) {
             throw new RuntimeException("Failed to convert JSON to Map", e);
         }
@@ -92,7 +98,7 @@ public class JsonUtils {
      */
     public static boolean isValidJson(String json) {
         try {
-            mapper.readTree(json);
+            MAPPER.readTree(json);
             return true;
         } catch (JsonProcessingException e) {
             return false;
@@ -103,28 +109,34 @@ public class JsonUtils {
      * Merge two JSON nodes, with the second node taking precedence
      */
     public static JsonNode mergeJsonNodes(JsonNode mainNode, JsonNode updateNode) {
-        if (mainNode instanceof ObjectNode && updateNode instanceof ObjectNode) {
-            ObjectNode merged = (ObjectNode) mainNode.deepCopy();
-            updateNode.fields().forEachRemaining(entry -> {
+        if (mainNode == null || updateNode == null) {
+            return mainNode == null ? updateNode : mainNode;
+        }
+
+        JsonNode merged = mainNode.deepCopy();
+        if (merged.isObject() && updateNode.isObject()) {
+            ObjectNode mergedObj = (ObjectNode) merged;
+            Iterator<Map.Entry<String, JsonNode>> fields = updateNode.fields();
+            while (fields.hasNext()) {
+                Map.Entry<String, JsonNode> entry = fields.next();
                 String key = entry.getKey();
                 JsonNode value = entry.getValue();
 
                 if (merged.has(key) && merged.get(key).isObject() && value.isObject()) {
-                    merged.set(key, mergeJsonNodes(merged.get(key), value));
+                    mergedObj.set(key, mergeJsonNodes(merged.get(key), value));
                 } else {
-                    merged.set(key, value);
+                    mergedObj.set(key, value);
                 }
-            });
-            return merged;
+            }
         }
-        return updateNode;
+        return merged;
     }
 
     /**
      * Filter JSON array node based on criteria
      */
     public static ArrayNode filterArrayNode(ArrayNode arrayNode, Map<String, Object> criteria) {
-        ArrayNode filtered = mapper.createArrayNode();
+        ArrayNode filtered = MAPPER.createArrayNode();
         arrayNode.elements().forEachRemaining(element -> {
             if (matchesCriteria(element, criteria)) {
                 filtered.add(element);
@@ -148,7 +160,7 @@ public class JsonUtils {
      * Extract specified fields from JSON node
      */
     public static JsonNode extractFields(JsonNode node, String... fields) {
-        ObjectNode result = mapper.createObjectNode();
+        ObjectNode result = MAPPER.createObjectNode();
         for (String field : fields) {
             if (node.has(field)) {
                 result.set(field, node.get(field));
@@ -182,15 +194,55 @@ public class JsonUtils {
      * Get the shared ObjectMapper instance
      */
     public static ObjectMapper getObjectMapper() {
-        return mapper;
+        return MAPPER;
     }
 
-    /**
-     * Set custom ObjectMapper configuration
-     */
-    public static void configureObjectMapper(ObjectMapper customMapper) {
-        if (customMapper != null) {
-            mapper = customMapper;
+    public static JsonNode substituteConfigValues(JsonNode node) {
+        if (node.isObject()) {
+            ObjectNode objectNode = (ObjectNode) node;
+            Iterator<Map.Entry<String, JsonNode>> fields = node.fields();
+            while (fields.hasNext()) {
+                Map.Entry<String, JsonNode> entry = fields.next();
+                JsonNode fieldNode = entry.getValue();
+                
+                if (fieldNode.isTextual()) {
+                    String text = fieldNode.asText();
+                    Matcher matcher = CONFIG_PATTERN.matcher(text);
+                    if (matcher.find()) {
+                        String configPath = matcher.group(1);
+                        String[] pathParts = configPath.split("\\.");
+                        Object value = config.getValue(pathParts);
+                        if (value != null) {
+                            objectNode.put(entry.getKey(), String.valueOf(value));
+                        }
+                    }
+                } else if (fieldNode.isObject() || fieldNode.isArray()) {
+                    substituteConfigValues(fieldNode);
+                }
+            }
+        } else if (node.isArray()) {
+            for (JsonNode element : node) {
+                substituteConfigValues(element);
+            }
         }
+        return node;
+    }
+
+    public static Map<String, Object> toMap(String json) {
+        try {
+            return MAPPER.readValue(json, Map.class);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to convert JSON to Map", e);
+        }
+    }
+
+    public static Map<String, Object> cleanupMap(Map<String, Object> map) {
+        Map<String, Object> cleanMap = new java.util.HashMap<>();
+        for (Map.Entry<String, Object> entry : map.entrySet()) {
+            if (entry.getValue() != null) {
+                cleanMap.put(entry.getKey(), entry.getValue());
+            }
+        }
+        return cleanMap;
     }
 }
