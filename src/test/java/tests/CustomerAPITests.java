@@ -9,7 +9,7 @@ import io.qameta.allure.SeverityLevel;
 import io.restassured.builder.RequestSpecBuilder;
 import io.restassured.response.Response;
 import org.testng.annotations.Test;
-import utils.DataProvider;
+import utils.data.DataProvider;
 import utils.DateUtils;
 import static io.restassured.RestAssured.given;
 import static io.restassured.module.jsv.JsonSchemaValidator.matchesJsonSchemaInClasspath;
@@ -22,7 +22,7 @@ import io.restassured.specification.RequestSpecification;
 import static org.assertj.core.api.Assertions.fail;
 
 // Add import for ResponseValidator if it exists in your project
-// import utils.ResponseValidator;
+// import utils.validation.ResponseValidator;
 
 @Feature("Customer API Tests")
 public class CustomerAPITests extends BaseAPITest {

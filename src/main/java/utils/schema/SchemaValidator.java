@@ -1,4 +1,4 @@
-package utils;
+package utils.schema;
 
 import io.restassured.module.jsv.JsonSchemaValidator;
 import org.everit.json.schema.Schema;

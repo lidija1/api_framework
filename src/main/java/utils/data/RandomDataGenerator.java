@@ -1,4 +1,4 @@
-package utils;
+package utils.data;
 
 import com.github.javafaker.Faker;
 import java.util.UUID;

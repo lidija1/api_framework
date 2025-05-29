@@ -1,15 +1,14 @@
-package utils;
+package utils.auth;
 
 import io.restassured.specification.RequestSpecification;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import utils.auth.*;
+// import org.slf4j.Logger;
+// import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class AuthenticationManager {
-    private static final Logger logger = LoggerFactory.getLogger(AuthenticationManager.class);
+    // private static final Logger logger = LoggerFactory.getLogger(AuthenticationManager.class);
     private static final Map<String, AuthStrategy> strategies = new ConcurrentHashMap<>();
     
     static {

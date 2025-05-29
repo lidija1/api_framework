@@ -1,4 +1,4 @@
-package utils;
+package utils.http;
 
 import io.restassured.builder.RequestSpecBuilder;
 import io.restassured.http.ContentType;
@@ -12,6 +12,8 @@ import exceptions.SerializationException;
 import exceptions.ConfigurationException;
 import io.restassured.RestAssured;
 import io.restassured.response.Response;
+import utils.LoggerUtils;
+
 import java.util.Map;
 import java.net.URI;
 
@@ -85,6 +87,8 @@ public class APIClient {
             Response response = RestAssured
                 .given()
                     .spec(getRequestSpec())
+                    .header("X-Request-Method", "GET")
+                    .header("X-Request-URL", endpoint)
                 .when()
                     .get(endpoint)
                 .then()
@@ -121,6 +125,8 @@ public class APIClient {
             Response response = RestAssured
                 .given()
                     .spec(getRequestSpec())
+                    .header("X-Request-Method", "POST")
+                    .header("X-Request-URL", endpoint)
                     .body(body)
                 .when()
                     .post(endpoint)
@@ -154,6 +160,8 @@ public class APIClient {
             Response response = RestAssured
                 .given()
                     .spec(getRequestSpec())
+                    .header("X-Request-Method", "PUT")
+                    .header("X-Request-URL", endpoint)
                     .body(body)
                 .when()
                     .put(endpoint)
@@ -181,6 +189,8 @@ public class APIClient {
             Response response = RestAssured
                 .given()
                     .spec(getRequestSpec())
+                    .header("X-Request-Method", "DELETE")
+                    .header("X-Request-URL", endpoint)
                 .when()
                     .delete(endpoint)
                 .then()
@@ -213,6 +223,8 @@ public class APIClient {
             Response response = RestAssured
                 .given()
                     .spec(getRequestSpec())
+                    .header("X-Request-Method", "PATCH")
+                    .header("X-Request-URL", endpoint)
                     .body(body)
                 .when()
                     .patch(endpoint)
